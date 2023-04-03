@@ -41,6 +41,7 @@ func main() {
 
 	router.GET("/products", getAll)
 	router.GET("/products/:id", getById)
+	router.GET("/products/search", searchByPriceGt)
 
 	router.Run()
 }
@@ -66,14 +67,34 @@ func getAll(c *gin.Context) {
 
 func getById(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
+
 	if err != nil {
 		c.JSON(http.StatusBadRequest, "can not parse")
 		return
 	}
+
 	for _, product := range products {
 		if id == product.ID {
 			c.JSON(http.StatusOK, product)
 			return
 		}
 	}
+}
+
+func searchByPriceGt(c *gin.Context) {
+	price, err := strconv.ParseFloat(c.Query("price"), 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, "can not parse")
+		return
+	}
+
+	var productsByPriceGt []Product
+
+	for _, product := range products {
+		if price < product.Price {
+			productsByPriceGt = append(productsByPriceGt, product)
+		}
+	}
+
+	c.JSON(http.StatusOK, productsByPriceGt)
 }
