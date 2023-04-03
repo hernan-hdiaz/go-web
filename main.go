@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -39,6 +40,7 @@ func main() {
 	})
 
 	router.GET("/products", getAll)
+	router.GET("/products/:id", getById)
 
 	router.Run()
 }
@@ -60,4 +62,18 @@ func obtainData() error {
 
 func getAll(c *gin.Context) {
 	c.JSON(http.StatusOK, products)
+}
+
+func getById(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, "can not parse")
+		return
+	}
+	for _, product := range products {
+		if id == product.ID {
+			c.JSON(http.StatusOK, product)
+			return
+		}
+	}
 }
