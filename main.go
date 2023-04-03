@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+
+	"github.com/gin-gonic/gin"
 )
 
 type Product struct {
@@ -28,10 +30,18 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	router := gin.Default()
+
+	router.GET("/ping", func(c *gin.Context) {
+		c.String(200, "pong")
+	})
+
+	router.Run()
 }
 
 func obtainData() error {
-	file, err := os.Open("../products.json")
+	file, err := os.Open("./products.json")
 	if err != nil {
 		return ErrCanNotOpen
 	}
