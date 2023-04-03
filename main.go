@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -37,6 +38,8 @@ func main() {
 		c.String(200, "pong")
 	})
 
+	router.GET("/products", getAll)
+
 	router.Run()
 }
 
@@ -53,4 +56,8 @@ func obtainData() error {
 		return ErrCanNotRead
 	}
 	return nil
+}
+
+func getAll(c *gin.Context) {
+	c.JSON(http.StatusOK, products)
 }
