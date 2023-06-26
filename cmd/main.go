@@ -48,6 +48,18 @@ package main
 // con el contenido en la request. Tené en cuenta validar los campos que se envían, como hiciste con
 // el método POST. Seguimos aplicando los cambios sobre la lista cargada en memoria.
 
+// Ejercicio 1: Token de acceso
+// Vamos a definir un token de acceso en nuestra API, para eso crearemos una variable de entorno que
+// contenga un token secreto. Esta variable se deberá iniciar a partir de un archivo .env con el nombre
+// de TOKEN y el valor del mismo.
+// Luego, vamos a implementar un control de acceso a las acciones que modifiquen nuestros datos,
+// utilizaremos los métodos POST, PUT, PATCH y DELETE; para esto debemos leer el header de las request
+// que recibamos en estos métodos y validar que se encuentre el token con el valor que definimos.
+// En Postman podemos agregar contenido al header, veamos cómo: dentro de nuestra consulta debemos
+// hacer clic en la pestaña de Headers. Luego, veremos una lista que nos permite agregar campos a la
+// cabecera de nuestra consulta, el campo KEY contiene el nombre de la variable y VALUE contiene el
+// valor de dicha variable.
+
 import (
 	"errors"
 
@@ -55,6 +67,7 @@ import (
 	"github.com/hernan-hdiaz/go-web/cmd/handler"
 	"github.com/hernan-hdiaz/go-web/internal/domain"
 	"github.com/hernan-hdiaz/go-web/internal/product"
+	"github.com/joho/godotenv"
 )
 
 var (
@@ -67,6 +80,7 @@ var (
 )
 
 func main() {
+	_ = godotenv.Load()
 	router := gin.Default()
 
 	router.GET("/ping", func(c *gin.Context) {

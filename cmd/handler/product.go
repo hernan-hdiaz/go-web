@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -81,6 +82,15 @@ func (p *Product) SearchByPriceGt() gin.HandlerFunc {
 
 func (p *Product) Save() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		//Validate token
+		token := c.GetHeader("token")
+		if token != os.Getenv("TOKEN") {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "token inválido",
+			})
+			return
+		}
+
 		var productRequest domain.Product
 		if err := c.ShouldBindJSON(&productRequest); err != nil {
 			c.JSON(http.StatusUnprocessableEntity, gin.H{
@@ -113,6 +123,14 @@ func (p *Product) Save() gin.HandlerFunc {
 
 func (p *Product) Update() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		//Validate token
+		token := c.GetHeader("token")
+		if token != os.Getenv("TOKEN") {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "token inválido",
+			})
+			return
+		}
 
 		//Get code_value from path param
 		codeValue := c.Param("codeValue")
@@ -149,6 +167,15 @@ func (p *Product) Update() gin.HandlerFunc {
 
 func (p *Product) Modify() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		//Validate token
+		token := c.GetHeader("token")
+		if token != os.Getenv("TOKEN") {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "token inválido",
+			})
+			return
+		}
+
 		//Get code_value from path param
 		codeValue := c.Param("codeValue")
 
@@ -174,6 +201,14 @@ func (p *Product) Modify() gin.HandlerFunc {
 
 func (p *Product) Delete() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		//Validate token
+		token := c.GetHeader("token")
+		if token != os.Getenv("TOKEN") {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "token inválido",
+			})
+			return
+		}
 		//Get ID from path param
 		codeValue := c.Param("codeValue")
 		//Search product by codeValue
