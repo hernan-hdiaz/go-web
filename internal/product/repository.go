@@ -26,11 +26,12 @@ var (
 type Repository interface {
 	Get(ctx context.Context, id int) (domain.Product, error)
 	GetAll(ctx context.Context) ([]domain.Product, error)
-	SearchByCodeValue(ctx context.Context, codeValue string) (domain.Product, int)
+	SearchByCodeValue(ctx context.Context, codeValue string) (domain.Product, int, error)
 	SearchByPriceGt(ctx context.Context, priceGt float64) ([]domain.Product, error)
 	Save(ctx context.Context, productRequest domain.Product) int
 	Exists(ctx context.Context, codeValue string) bool
 	Update(ctx context.Context, product domain.Product, index int)
+	Delete(ctx context.Context, codeValue string) error
 }
 
 type repository struct {
@@ -98,17 +99,27 @@ func (r *repository) Exists(ctx context.Context, codeValue string) bool {
 	return false
 }
 
-func (r *repository) SearchByCodeValue(ctx context.Context, codeValue string) (domain.Product, int) {
+func (r *repository) SearchByCodeValue(ctx context.Context, codeValue string) (domain.Product, int, error) {
 	for i, p := range products {
 		if p.CodeValue == codeValue {
-			return p, i
+			return p, i, nil
 		}
 	}
 
-	return domain.Product{}, 0
+	return domain.Product{}, 0, ErrNotFound
 }
 
 func (r *repository) Update(ctx context.Context, productRequest domain.Product, index int) {
 	products = append(products[:index], products[index+1:]...)
 	products = append(products, productRequest)
+}
+
+func (r *repository) Delete(ctx context.Context, codeValue string) error {
+	_, productIndex, err := r.SearchByCodeValue(ctx, codeValue)
+	if err != nil {
+		return err
+	}
+
+	products = append(products[:productIndex], products[productIndex+1:]...)
+	return nil
 }

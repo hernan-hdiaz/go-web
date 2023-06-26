@@ -86,6 +86,7 @@ func main() {
 	router.POST("/products", handler.Save())
 	router.PUT("/products/:codeValue", handler.Update())
 	router.PATCH("/products/:codeValue", handler.Modify())
+	router.DELETE("/products/:codeValue", handler.Delete())
 
 	router.Run()
 }

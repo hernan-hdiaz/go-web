@@ -149,26 +149,8 @@ func (p *Product) Update() gin.HandlerFunc {
 
 func (p *Product) Modify() gin.HandlerFunc {
 	return func(c *gin.Context) {
-
 		//Get code_value from path param
 		codeValue := c.Param("codeValue")
-
-		// //Search warehouse by ID
-		// warehouseToUpdate, err := p.productService.Get(c, warehouseToUpdateId)
-		// if err != nil {
-		// 	web.Error(c, http.StatusNotFound, err.Error())
-		// 	return
-		// }
-
-		// type productRequest struct {
-		// 	ID          int     `json:"id"`
-		// 	Name        string  `json:"name"`
-		// 	Quantity    int     `json:"quantity"`
-		// 	CodeValue   string  `json:"code_value"`
-		// 	IsPublished bool    `json:"is_published"`
-		// 	Expiration  string  `json:"expiration"`
-		// 	Price       float64 `json:"price"`
-		// }
 
 		var prodReq domain.ProductRequest
 		if err := c.ShouldBindJSON(&prodReq); err != nil {
@@ -177,17 +159,6 @@ func (p *Product) Modify() gin.HandlerFunc {
 			})
 			return
 		}
-
-		// si no está vacío el Expiration
-		// //Parse given date
-		// _, err := time.Parse("02/01/2006", prodReq.Expiration)
-		// //Check valid format
-		// if err != nil {
-		// 	c.JSON(http.StatusUnprocessableEntity, gin.H{
-		// 		"error": err.Error(),
-		// 	})
-		// 	return
-		// }
 
 		productModified, err := p.productService.Modify(c, prodReq, codeValue)
 		if err != nil {
@@ -201,53 +172,19 @@ func (p *Product) Modify() gin.HandlerFunc {
 	}
 }
 
-// func (w *Warehouse) Update() gin.HandlerFunc {
-// return func(c *gin.Context) {
-//Get ID from path param
-// warehouseToUpdateId, err := strconv.Atoi(c.Param("id"))
-// if err != nil {
-// 	web.Error(c, http.StatusBadRequest, "invalid ID")
-// 	return
-// }
+func (p *Product) Delete() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		//Get ID from path param
+		codeValue := c.Param("codeValue")
+		//Search product by codeValue
+		err := p.productService.Delete(c, codeValue)
+		if err != nil {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
 
-//Search warehouse by ID
-// 	warehouseToUpdate, err := w.warehouseService.Get(c, warehouseToUpdateId)
-// 	if err != nil {
-// 		web.Error(c, http.StatusNotFound, err.Error())
-// 		return
-// 	}
-
-// 	//Patch warehouse data
-// 	err = c.ShouldBindJSON(&warehouseToUpdate)
-// 	if err != nil {
-// 		web.Error(c, http.StatusUnprocessableEntity, err.Error())
-// 		return
-// 	}
-
-// 	//Check id restraint
-// 	if warehouseToUpdateId != warehouseToUpdate.ID {
-// 		web.Error(c, http.StatusConflict, "cannot modify ID")
-// 		return
-// 	}
-
-// 	//Check fields restraints
-// 	validity := Validation(warehouseToUpdate)
-// 	if validity != "" {
-// 		web.Error(c, http.StatusUnprocessableEntity, validity)
-// 		return
-// 	}
-
-// 	//Update warehouse
-// 	err = w.warehouseService.Update(c, warehouseToUpdate)
-// 	if err != nil {
-// 		if errors.Is(err, warehouse.ErrAlreadyExists) || errors.Is(err, warehouse.ErrLocalityID) {
-// 			web.Error(c, http.StatusConflict, err.Error())
-// 			return
-// 		}
-// 		web.Error(c, http.StatusInternalServerError, err.Error())
-// 		return
-// 	}
-
-// 	web.Success(c, http.StatusOK, warehouseToUpdate)
-// }
-// }
+		c.JSON(http.StatusNoContent, nil)
+	}
+}

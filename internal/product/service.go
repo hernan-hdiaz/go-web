@@ -14,6 +14,7 @@ type Service interface {
 	Save(ctx context.Context, productRequest domain.Product) (int, error)
 	Update(ctx context.Context, productRequest domain.Product, codeValue string) (domain.Product, error)
 	Modify(ctx context.Context, productRequest domain.ProductRequest, codeValue string) (domain.Product, error)
+	Delete(ctx context.Context, codeValue string) error
 }
 
 type service struct {
@@ -86,7 +87,10 @@ func (s *service) Update(ctx context.Context, productRequest domain.Product, cod
 	}
 
 	if s.repo.Exists(ctx, codeValue) {
-		product, index := s.repo.SearchByCodeValue(ctx, codeValue)
+		product, index, err := s.repo.SearchByCodeValue(ctx, codeValue)
+		if err != nil {
+			return domain.Product{}, err
+		}
 		productRequest.ID = product.ID
 		s.repo.Update(ctx, productRequest, index)
 	} else {
@@ -98,7 +102,8 @@ func (s *service) Update(ctx context.Context, productRequest domain.Product, cod
 
 func (s *service) Modify(ctx context.Context, productRequest domain.ProductRequest, codeValue string) (domain.Product, error) {
 
-	if s.repo.Exists(ctx, codeValue) {
+	if productToModify, index, err := s.repo.SearchByCodeValue(ctx, codeValue); err == nil {
+		//Check expiration restraints
 		if productRequest.Expiration != "" {
 			date, err := time.Parse("02/01/2006", productRequest.Expiration)
 			if err != nil {
@@ -111,8 +116,7 @@ func (s *service) Modify(ctx context.Context, productRequest domain.ProductReque
 				return domain.Product{}, ErrDateOutOfRange
 			}
 		}
-
-		//Check code_values
+		//Check code_values restraints
 		if productRequest.CodeValue != "" {
 			if codeValue != productRequest.CodeValue {
 				if s.repo.Exists(ctx, productRequest.CodeValue) {
@@ -122,15 +126,15 @@ func (s *service) Modify(ctx context.Context, productRequest domain.ProductReque
 				}
 			}
 		}
-
+		//Check quantity restraints
 		if productRequest.Quantity < 0 {
 			return domain.Product{}, ErrQuantityOutOfRange
 		}
+		//Check price restraints
 		if productRequest.Price < 0 {
 			return domain.Product{}, ErrPriceOutOfRange
 		}
 
-		productToModify, index := s.repo.SearchByCodeValue(ctx, codeValue)
 		// Patch product data
 		if productRequest.Name != "" {
 			productToModify.Name = productRequest.Name
@@ -156,4 +160,9 @@ func (s *service) Modify(ctx context.Context, productRequest domain.ProductReque
 	} else {
 		return domain.Product{}, ErrNotFound
 	}
+}
+
+func (s *service) Delete(ctx context.Context, codeValue string) error {
+	err := s.repo.Delete(ctx, codeValue)
+	return err
 }
