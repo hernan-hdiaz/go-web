@@ -85,6 +85,7 @@ func main() {
 	router.GET("/products/search", handler.SearchByPriceGt())
 	router.POST("/products", handler.Save())
 	router.PUT("/products/:codeValue", handler.Update())
+	router.PATCH("/products/:codeValue", handler.Modify())
 
 	router.Run()
 }

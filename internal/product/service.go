@@ -13,6 +13,7 @@ type Service interface {
 	SearchByPriceGt(ctx context.Context, priceGt float64) ([]domain.Product, error)
 	Save(ctx context.Context, productRequest domain.Product) (int, error)
 	Update(ctx context.Context, productRequest domain.Product, codeValue string) (domain.Product, error)
+	Modify(ctx context.Context, productRequest domain.ProductRequest, codeValue string) (domain.Product, error)
 }
 
 type service struct {
@@ -93,4 +94,66 @@ func (s *service) Update(ctx context.Context, productRequest domain.Product, cod
 	}
 
 	return productRequest, nil
+}
+
+func (s *service) Modify(ctx context.Context, productRequest domain.ProductRequest, codeValue string) (domain.Product, error) {
+
+	if s.repo.Exists(ctx, codeValue) {
+		if productRequest.Expiration != "" {
+			date, err := time.Parse("02/01/2006", productRequest.Expiration)
+			if err != nil {
+				return domain.Product{}, err
+			}
+			//Set minimum date
+			minimum_date, _ := time.Parse("02/01/2006", "01/01/2023")
+			//Check date restraints
+			if date.Before(minimum_date) {
+				return domain.Product{}, ErrDateOutOfRange
+			}
+		}
+
+		//Check code_values
+		if productRequest.CodeValue != "" {
+			if codeValue != productRequest.CodeValue {
+				if s.repo.Exists(ctx, productRequest.CodeValue) {
+					return domain.Product{}, ErrAlreadyExists
+				} else if !s.repo.Exists(ctx, codeValue) {
+					return domain.Product{}, ErrCodeValueMissmatch
+				}
+			}
+		}
+
+		if productRequest.Quantity < 0 {
+			return domain.Product{}, ErrQuantityOutOfRange
+		}
+		if productRequest.Price < 0 {
+			return domain.Product{}, ErrPriceOutOfRange
+		}
+
+		productToModify, index := s.repo.SearchByCodeValue(ctx, codeValue)
+		// Patch product data
+		if productRequest.Name != "" {
+			productToModify.Name = productRequest.Name
+		}
+		if productRequest.Quantity != 0 {
+			productToModify.Quantity = productRequest.Quantity
+		}
+		if productRequest.CodeValue != "" {
+			productToModify.CodeValue = productRequest.CodeValue
+		}
+		if productRequest.IsPublished != nil {
+			productToModify.IsPublished = *productRequest.IsPublished
+		}
+		if productRequest.Expiration != "" {
+			productToModify.Expiration = productRequest.Expiration
+		}
+		if productRequest.Price != 0 {
+			productToModify.Price = productRequest.Price
+		}
+
+		s.repo.Update(ctx, productToModify, index)
+		return productToModify, nil
+	} else {
+		return domain.Product{}, ErrNotFound
+	}
 }

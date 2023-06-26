@@ -17,6 +17,8 @@ var (
 	ErrAlreadyExists      = errors.New("code_value already exists")
 	ErrDateOutOfRange     = errors.New("expiration must be after 01/01/2023")
 	ErrCodeValueMissmatch = errors.New("codeValues missmatch")
+	ErrPriceOutOfRange    = errors.New("price must be greater than 0")
+	ErrQuantityOutOfRange = errors.New("quantity must be greater than 0")
 	products              = []domain.Product{}
 )
 
@@ -110,16 +112,3 @@ func (r *repository) Update(ctx context.Context, productRequest domain.Product, 
 	products = append(products[:index], products[index+1:]...)
 	products = append(products, productRequest)
 }
-
-// Update
-// func main() {
-// 	var strSlice = []string{"India", "Canada", "Japan", "Germany", "Italy"}
-// 	fmt.Println(strSlice)
-
-// 	strSlice = RemoveIndex(strSlice, 3)
-// 	fmt.Println(strSlice)
-// }
-
-// func RemoveIndex(s []string, index int) []string {
-// 	return append(s[:index], s[index+1:]...)
-// }
