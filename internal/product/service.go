@@ -12,6 +12,7 @@ type Service interface {
 	GetAll(ctx context.Context) ([]domain.Product, error)
 	SearchByPriceGt(ctx context.Context, priceGt float64) ([]domain.Product, error)
 	Save(ctx context.Context, productRequest domain.Product) (int, error)
+	Update(ctx context.Context, productRequest domain.Product, codeValue string) (domain.Product, error)
 }
 
 type service struct {
@@ -62,4 +63,34 @@ func (s *service) Save(ctx context.Context, productRequest domain.Product) (int,
 
 	productID := s.repo.Save(ctx, productRequest)
 	return productID, nil
+}
+
+func (s *service) Update(ctx context.Context, productRequest domain.Product, codeValue string) (domain.Product, error) {
+
+	date, _ := time.Parse("02/01/2006", productRequest.Expiration)
+	//Set minimum date
+	minimum_date, _ := time.Parse("02/01/2006", "01/01/2023")
+	//Check date restraints
+	if date.Before(minimum_date) {
+		return domain.Product{}, ErrDateOutOfRange
+	}
+
+	//Check code_values
+	if codeValue != productRequest.CodeValue {
+		if s.repo.Exists(ctx, productRequest.CodeValue) {
+			return domain.Product{}, ErrAlreadyExists
+		} else if !s.repo.Exists(ctx, codeValue) {
+			return domain.Product{}, ErrCodeValueMissmatch
+		}
+	}
+
+	if s.repo.Exists(ctx, codeValue) {
+		product, index := s.repo.SearchByCodeValue(ctx, codeValue)
+		productRequest.ID = product.ID
+		s.repo.Update(ctx, productRequest, index)
+	} else {
+		productRequest.ID = s.repo.Save(ctx, productRequest)
+	}
+
+	return productRequest, nil
 }

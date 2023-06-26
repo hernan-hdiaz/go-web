@@ -11,21 +11,24 @@ import (
 )
 
 var (
-	ErrCanNotOpen     = errors.New("can not open file")
-	ErrCanNotRead     = errors.New("can not read file")
-	ErrNotFound       = errors.New("product not found")
-	ErrAlreadyExists  = errors.New("code_value already exists")
-	ErrDateOutOfRange = errors.New("expiration must be after 01/01/2023")
-	products          = []domain.Product{}
+	ErrCanNotOpen         = errors.New("can not open file")
+	ErrCanNotRead         = errors.New("can not read file")
+	ErrNotFound           = errors.New("product not found")
+	ErrAlreadyExists      = errors.New("code_value already exists")
+	ErrDateOutOfRange     = errors.New("expiration must be after 01/01/2023")
+	ErrCodeValueMissmatch = errors.New("codeValues missmatch")
+	products              = []domain.Product{}
 )
 
 // Repository encapsulates the storage of a product.
 type Repository interface {
 	Get(ctx context.Context, id int) (domain.Product, error)
 	GetAll(ctx context.Context) ([]domain.Product, error)
+	SearchByCodeValue(ctx context.Context, codeValue string) (domain.Product, int)
 	SearchByPriceGt(ctx context.Context, priceGt float64) ([]domain.Product, error)
 	Save(ctx context.Context, productRequest domain.Product) int
 	Exists(ctx context.Context, codeValue string) bool
+	Update(ctx context.Context, product domain.Product, index int)
 }
 
 type repository struct {
@@ -89,5 +92,34 @@ func (r *repository) Exists(ctx context.Context, codeValue string) bool {
 			return true
 		}
 	}
+
 	return false
 }
+
+func (r *repository) SearchByCodeValue(ctx context.Context, codeValue string) (domain.Product, int) {
+	for i, p := range products {
+		if p.CodeValue == codeValue {
+			return p, i
+		}
+	}
+
+	return domain.Product{}, 0
+}
+
+func (r *repository) Update(ctx context.Context, productRequest domain.Product, index int) {
+	products = append(products[:index], products[index+1:]...)
+	products = append(products, productRequest)
+}
+
+// Update
+// func main() {
+// 	var strSlice = []string{"India", "Canada", "Japan", "Germany", "Italy"}
+// 	fmt.Println(strSlice)
+
+// 	strSlice = RemoveIndex(strSlice, 3)
+// 	fmt.Println(strSlice)
+// }
+
+// func RemoveIndex(s []string, index int) []string {
+// 	return append(s[:index], s[index+1:]...)
+// }

@@ -43,6 +43,11 @@ package main
 // Service: contiene la lógica de negocio de la API, maneja conexiones externas.
 // Controller: toma las peticiones del cliente, valida las entradas y retorna las respuestas.
 
+// Ejercicio 1: Método PUT
+// Añadir el método PUT a nuestra API, recordemos que crea o reemplaza un recurso en su totalidad
+// con el contenido en la request. Tené en cuenta validar los campos que se envían, como hiciste con
+// el método POST. Seguimos aplicando los cambios sobre la lista cargada en memoria.
+
 import (
 	"errors"
 
@@ -79,6 +84,7 @@ func main() {
 	router.GET("/products/:id", handler.Get())
 	router.GET("/products/search", handler.SearchByPriceGt())
 	router.POST("/products", handler.Save())
+	router.PUT("/products/:codeValue", handler.Update())
 
 	router.Run()
 }

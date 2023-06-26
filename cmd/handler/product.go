@@ -110,3 +110,39 @@ func (p *Product) Save() gin.HandlerFunc {
 		c.JSON(http.StatusCreated, productRequest)
 	}
 }
+
+func (p *Product) Update() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		//Get code_value from path param
+		codeValue := c.Param("codeValue")
+
+		var productRequest domain.Product
+		if err := c.ShouldBindJSON(&productRequest); err != nil {
+			c.JSON(http.StatusUnprocessableEntity, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		//Parse given date
+		_, err := time.Parse("02/01/2006", productRequest.Expiration)
+		//Check valid format
+		if err != nil {
+			c.JSON(http.StatusUnprocessableEntity, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		productUpdated, err := p.productService.Update(c, productRequest, codeValue)
+		if err != nil {
+			c.JSON(http.StatusConflict, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusCreated, productUpdated)
+	}
+}
