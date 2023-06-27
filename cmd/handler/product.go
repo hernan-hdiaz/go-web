@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 	"os"
 	"strconv"
@@ -9,6 +10,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hernan-hdiaz/go-web/internal/domain"
 	"github.com/hernan-hdiaz/go-web/internal/product"
+	"github.com/hernan-hdiaz/go-web/pkg/web"
+)
+
+var (
+	ErrInvalidID    = errors.New("invalid id")
+	ErrCanNotParse  = errors.New("can not parse")
+	ErrInvalidToken = errors.New("invalid token")
 )
 
 type Product struct {
@@ -26,35 +34,25 @@ func (p *Product) Get() gin.HandlerFunc {
 		//Get ID from path param
 		id, err := strconv.Atoi(c.Param("id"))
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "id must be int",
-			})
+			web.Failure(c, http.StatusBadRequest, ErrInvalidID)
 			return
 		}
 		//Search product by ID
 		product, err := p.productService.Get(c, id)
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": err.Error(),
-			})
+			web.Failure(c, http.StatusNotFound, err)
 			return
 		}
 		//Return found product
-		c.JSON(http.StatusOK, product)
+		web.Success(c, http.StatusOK, product)
 	}
 }
 
 func (p *Product) GetAll() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		products, err := p.productService.GetAll(c)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": err.Error(),
-			})
-			return
-		}
+		products := p.productService.GetAll(c)
 		//Return products
-		c.JSON(http.StatusOK, products)
+		web.Success(c, http.StatusOK, products)
 	}
 }
 
@@ -62,21 +60,16 @@ func (p *Product) SearchByPriceGt() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		priceGt, err := strconv.ParseFloat(c.Query("priceGt"), 64)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "can not parse",
-			})
+			web.Failure(c, http.StatusBadRequest, ErrCanNotParse)
 			return
 		}
 
 		productsByPriceGt, err := p.productService.SearchByPriceGt(c, priceGt)
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": err.Error(),
-			})
+			web.Failure(c, http.StatusNotFound, err)
 			return
 		}
-
-		c.JSON(http.StatusOK, productsByPriceGt)
+		web.Success(c, http.StatusOK, productsByPriceGt)
 	}
 }
 
@@ -85,17 +78,13 @@ func (p *Product) Save() gin.HandlerFunc {
 		//Validate token
 		token := c.GetHeader("token")
 		if token != os.Getenv("TOKEN") {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "token inválido",
-			})
+			web.Failure(c, http.StatusUnauthorized, ErrInvalidToken)
 			return
 		}
 
 		var productRequest domain.Product
 		if err := c.ShouldBindJSON(&productRequest); err != nil {
-			c.JSON(http.StatusUnprocessableEntity, gin.H{
-				"error": err.Error(),
-			})
+			web.Failure(c, http.StatusUnprocessableEntity, err)
 			return
 		}
 
@@ -103,21 +92,16 @@ func (p *Product) Save() gin.HandlerFunc {
 		_, err := time.Parse("02/01/2006", productRequest.Expiration)
 		//Check valid format
 		if err != nil {
-			c.JSON(http.StatusUnprocessableEntity, gin.H{
-				"error": err.Error(),
-			})
+			web.Failure(c, http.StatusUnprocessableEntity, err)
 			return
 		}
 
 		productRequest.ID, err = p.productService.Save(c, productRequest)
 		if err != nil {
-			c.JSON(http.StatusConflict, gin.H{
-				"error": err.Error(),
-			})
+			web.Failure(c, http.StatusConflict, err)
 			return
 		}
-
-		c.JSON(http.StatusCreated, productRequest)
+		web.Success(c, http.StatusCreated, productRequest)
 	}
 }
 
@@ -126,26 +110,20 @@ func (p *Product) Update() gin.HandlerFunc {
 		//Validate token
 		token := c.GetHeader("token")
 		if token != os.Getenv("TOKEN") {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "token inválido",
-			})
+			web.Failure(c, http.StatusUnauthorized, ErrInvalidToken)
 			return
 		}
 
 		//Get ID from path param
 		id, err := strconv.Atoi(c.Param("id"))
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "id must be int",
-			})
+			web.Failure(c, http.StatusBadRequest, ErrInvalidID)
 			return
 		}
 
 		var productRequest domain.ProductRequest
 		if err := c.ShouldBindJSON(&productRequest); err != nil {
-			c.JSON(http.StatusUnprocessableEntity, gin.H{
-				"error": err.Error(),
-			})
+			web.Failure(c, http.StatusUnprocessableEntity, err)
 			return
 		}
 
@@ -153,21 +131,16 @@ func (p *Product) Update() gin.HandlerFunc {
 		_, err = time.Parse("02/01/2006", productRequest.Expiration)
 		//Check valid format
 		if err != nil {
-			c.JSON(http.StatusUnprocessableEntity, gin.H{
-				"error": err.Error(),
-			})
+			web.Failure(c, http.StatusUnprocessableEntity, err)
 			return
 		}
 
 		productUpdated, err := p.productService.Update(c, productRequest, id)
 		if err != nil {
-			c.JSON(http.StatusConflict, gin.H{
-				"error": err.Error(),
-			})
+			web.Failure(c, http.StatusConflict, err)
 			return
 		}
-
-		c.JSON(http.StatusCreated, productUpdated)
+		web.Success(c, http.StatusCreated, productUpdated)
 	}
 }
 
@@ -176,28 +149,21 @@ func (p *Product) Delete() gin.HandlerFunc {
 		//Validate token
 		token := c.GetHeader("token")
 		if token != os.Getenv("TOKEN") {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "token inválido",
-			})
+			web.Failure(c, http.StatusUnauthorized, ErrInvalidToken)
 			return
 		}
 		//Get ID from path param
 		id, err := strconv.Atoi(c.Param("id"))
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": "id must be int",
-			})
+			web.Failure(c, http.StatusBadRequest, ErrInvalidID)
 			return
 		}
 		//Search product by codeValue
 		err = p.productService.Delete(c, id)
 		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": err.Error(),
-			})
+			web.Failure(c, http.StatusNotFound, err)
 			return
 		}
-
-		c.JSON(http.StatusNoContent, nil)
+		web.Success(c, http.StatusNoContent, nil)
 	}
 }

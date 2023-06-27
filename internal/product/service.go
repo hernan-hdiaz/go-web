@@ -9,7 +9,7 @@ import (
 
 type Service interface {
 	Get(ctx context.Context, id int) (domain.Product, error)
-	GetAll(ctx context.Context) ([]domain.Product, error)
+	GetAll(ctx context.Context) []domain.Product
 	SearchByPriceGt(ctx context.Context, priceGt float64) ([]domain.Product, error)
 	Save(ctx context.Context, productRequest domain.Product) (int, error)
 	Update(ctx context.Context, productRequest domain.ProductRequest, id int) (domain.Product, error)
@@ -32,9 +32,9 @@ func (s *service) Get(ctx context.Context, id int) (domain.Product, error) {
 	return product, nil
 }
 
-func (s *service) GetAll(ctx context.Context) ([]domain.Product, error) {
+func (s *service) GetAll(ctx context.Context) []domain.Product {
 	products := s.repo.GetAll()
-	return products, nil
+	return products
 }
 
 func (s *service) SearchByPriceGt(ctx context.Context, priceGt float64) ([]domain.Product, error) {
