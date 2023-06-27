@@ -1,125 +1,115 @@
 package product
 
 import (
-	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
-	"os"
 
 	"github.com/hernan-hdiaz/go-web/internal/domain"
+	"github.com/hernan-hdiaz/go-web/pkg/store"
 )
 
 var (
-	ErrCanNotOpen         = errors.New("can not open file")
-	ErrCanNotRead         = errors.New("can not read file")
 	ErrNotFound           = errors.New("product not found")
+	ErrCreatingProduct    = errors.New("error creating product")
+	ErrUpdatingProduct    = errors.New("error updating product")
 	ErrAlreadyExists      = errors.New("code_value already exists")
 	ErrDateOutOfRange     = errors.New("expiration must be after 01/01/2023")
-	ErrCodeValueMissmatch = errors.New("codeValues missmatch")
 	ErrPriceOutOfRange    = errors.New("price must be greater than 0")
 	ErrQuantityOutOfRange = errors.New("quantity must be greater than 0")
-	products              = []domain.Product{}
 )
 
-// Repository encapsulates the storage of a product.
 type Repository interface {
-	Get(ctx context.Context, id int) (domain.Product, error)
-	GetAll(ctx context.Context) ([]domain.Product, error)
-	SearchByCodeValue(ctx context.Context, codeValue string) (domain.Product, int, error)
-	SearchByPriceGt(ctx context.Context, priceGt float64) ([]domain.Product, error)
-	Save(ctx context.Context, productRequest domain.Product) int
-	Exists(ctx context.Context, codeValue string) bool
-	Update(ctx context.Context, product domain.Product, index int)
-	Delete(ctx context.Context, codeValue string) error
+	GetAll() []domain.Product
+	GetByID(id int) (domain.Product, error)
+	SearchPriceGt(price float64) []domain.Product
+	Create(p domain.Product) (int, error)
+	Update(id int, p domain.Product) (domain.Product, error)
+	Delete(id int) error
+	ValidateCodeValue(codeValue string) bool
 }
 
 type repository struct {
-	db *os.File
+	storage store.Store
 }
 
-func NewRepository() (Repository, error) {
-	file, err := os.Open("./products.json")
+func NewRepository(storage store.Store) Repository {
+	return &repository{storage}
+}
+
+// retrieves all products
+func (r *repository) GetAll() []domain.Product {
+	products, err := r.storage.GetAll()
 	if err != nil {
-		return &repository{}, ErrCanNotOpen
+		return []domain.Product{}
 	}
-	defer file.Close()
-
-	myDecoder := json.NewDecoder(file)
-
-	if err := myDecoder.Decode(&products); err != nil {
-		return &repository{}, ErrCanNotRead
-	}
-	return &repository{
-		db: file,
-	}, nil
+	return products
 }
 
-func (r *repository) Get(ctx context.Context, id int) (domain.Product, error) {
-	for _, product := range products {
-		if id == product.ID {
-			return product, nil
+// search product by ID
+func (r *repository) GetByID(id int) (domain.Product, error) {
+	product, err := r.storage.GetOne(id)
+	if err != nil {
+		return domain.Product{}, ErrNotFound
+	}
+	return product, nil
+
+}
+
+// search for products by price greater than given value
+func (r *repository) SearchPriceGt(price float64) []domain.Product {
+	var products []domain.Product
+	list, err := r.storage.GetAll()
+	if err != nil {
+		return products
+	}
+	for _, product := range list {
+		if product.Price > price {
+			products = append(products, product)
 		}
 	}
-	return domain.Product{}, ErrNotFound
+	return products
 }
 
-func (r *repository) GetAll(ctx context.Context) ([]domain.Product, error) {
-	return products, nil
+// adds a new product
+func (r *repository) Create(p domain.Product) (int, error) {
+	if validation := r.ValidateCodeValue(p.CodeValue); !validation {
+		return 0, ErrAlreadyExists
+	}
+	var err error
+	p.ID, err = r.storage.AddOne(p)
+	if err != nil {
+		return 0, ErrCreatingProduct
+	}
+	return p.ID, nil
 }
 
-func (r *repository) SearchByPriceGt(ctx context.Context, priceGt float64) ([]domain.Product, error) {
-	var productsByPriceGt []domain.Product
-
-	for _, product := range products {
-		if priceGt < product.Price {
-			productsByPriceGt = append(productsByPriceGt, product)
+// validates if the code value already exist on the product list
+func (r *repository) ValidateCodeValue(codeValue string) bool {
+	list, err := r.storage.GetAll()
+	if err != nil {
+		return false
+	}
+	for _, product := range list {
+		if product.CodeValue == codeValue {
+			return false
 		}
 	}
-	if len(productsByPriceGt) == 0 {
-		return []domain.Product{}, fmt.Errorf("not found products with price greater than %.2f", priceGt)
-	}
-	return productsByPriceGt, nil
+	return true
 }
 
-func (r *repository) Save(ctx context.Context, productRequest domain.Product) int {
-	lastID := len(products) + 1
-	productRequest.ID = lastID
-	products = append(products, productRequest)
-	return productRequest.ID
-}
-
-func (r *repository) Exists(ctx context.Context, codeValue string) bool {
-	for _, p := range products {
-		if p.CodeValue == codeValue {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (r *repository) SearchByCodeValue(ctx context.Context, codeValue string) (domain.Product, int, error) {
-	for i, p := range products {
-		if p.CodeValue == codeValue {
-			return p, i, nil
-		}
-	}
-
-	return domain.Product{}, 0, ErrNotFound
-}
-
-func (r *repository) Update(ctx context.Context, productRequest domain.Product, index int) {
-	products = append(products[:index], products[index+1:]...)
-	products = append(products, productRequest)
-}
-
-func (r *repository) Delete(ctx context.Context, codeValue string) error {
-	_, productIndex, err := r.SearchByCodeValue(ctx, codeValue)
+// deletes a product
+func (r *repository) Delete(id int) error {
+	err := r.storage.DeleteOne(id)
 	if err != nil {
 		return err
 	}
-
-	products = append(products[:productIndex], products[productIndex+1:]...)
 	return nil
+}
+
+// updates a product
+func (r *repository) Update(id int, p domain.Product) (domain.Product, error) {
+	err := r.storage.UpdateOne(p)
+	if err != nil {
+		return domain.Product{}, ErrUpdatingProduct
+	}
+	return p, nil
 }

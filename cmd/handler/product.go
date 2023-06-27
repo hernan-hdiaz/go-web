@@ -132,10 +132,16 @@ func (p *Product) Update() gin.HandlerFunc {
 			return
 		}
 
-		//Get code_value from path param
-		codeValue := c.Param("codeValue")
+		//Get ID from path param
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "id must be int",
+			})
+			return
+		}
 
-		var productRequest domain.Product
+		var productRequest domain.ProductRequest
 		if err := c.ShouldBindJSON(&productRequest); err != nil {
 			c.JSON(http.StatusUnprocessableEntity, gin.H{
 				"error": err.Error(),
@@ -144,7 +150,7 @@ func (p *Product) Update() gin.HandlerFunc {
 		}
 
 		//Parse given date
-		_, err := time.Parse("02/01/2006", productRequest.Expiration)
+		_, err = time.Parse("02/01/2006", productRequest.Expiration)
 		//Check valid format
 		if err != nil {
 			c.JSON(http.StatusUnprocessableEntity, gin.H{
@@ -153,7 +159,7 @@ func (p *Product) Update() gin.HandlerFunc {
 			return
 		}
 
-		productUpdated, err := p.productService.Update(c, productRequest, codeValue)
+		productUpdated, err := p.productService.Update(c, productRequest, id)
 		if err != nil {
 			c.JSON(http.StatusConflict, gin.H{
 				"error": err.Error(),
@@ -162,40 +168,6 @@ func (p *Product) Update() gin.HandlerFunc {
 		}
 
 		c.JSON(http.StatusCreated, productUpdated)
-	}
-}
-
-func (p *Product) Modify() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		//Validate token
-		token := c.GetHeader("token")
-		if token != os.Getenv("TOKEN") {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "token inválido",
-			})
-			return
-		}
-
-		//Get code_value from path param
-		codeValue := c.Param("codeValue")
-
-		var prodReq domain.ProductRequest
-		if err := c.ShouldBindJSON(&prodReq); err != nil {
-			c.JSON(http.StatusUnprocessableEntity, gin.H{
-				"error": err.Error(),
-			})
-			return
-		}
-
-		productModified, err := p.productService.Modify(c, prodReq, codeValue)
-		if err != nil {
-			c.JSON(http.StatusConflict, gin.H{
-				"error": err.Error(),
-			})
-			return
-		}
-
-		c.JSON(http.StatusCreated, productModified)
 	}
 }
 
@@ -210,9 +182,15 @@ func (p *Product) Delete() gin.HandlerFunc {
 			return
 		}
 		//Get ID from path param
-		codeValue := c.Param("codeValue")
+		id, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "id must be int",
+			})
+			return
+		}
 		//Search product by codeValue
-		err := p.productService.Delete(c, codeValue)
+		err = p.productService.Delete(c, id)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{
 				"error": err.Error(),
