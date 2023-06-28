@@ -178,3 +178,42 @@ func Test_Delete_OK(t *testing.T) {
 	assert.Equal(t, http.StatusNoContent, rr.Code)
 	assert.Nil(t, rr.Body.Bytes())
 }
+
+func Test_BadRequest(t *testing.T) {
+	r := createServer("my-secret-token")
+	test := []string{http.MethodDelete, http.MethodGet, http.MethodPut}
+	for _, method := range test {
+		req, rr := createRequestTest(method, "/products/not_number", "", "my-secret-token")
+		r.ServeHTTP(rr, req)
+		assert.Equal(t, http.StatusBadRequest, rr.Code)
+	}
+}
+
+func Test_NotFound(t *testing.T) {
+	test := []string{http.MethodDelete, http.MethodGet, http.MethodPut}
+	r := createServer("my-secret-token")
+	for _, method := range test {
+		req, rr := createRequestTest(method, "/products/1000", "{}", "my-secret-token")
+		r.ServeHTTP(rr, req)
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+	}
+}
+
+func Test_Unauthorized(t *testing.T) {
+
+	test := []string{http.MethodPut, http.MethodDelete}
+
+	r := createServer("my-secret-token")
+	for _, method := range test {
+		req, rr := createRequestTest(method, "/products/10", "{}", "not-my-token")
+		r.ServeHTTP(rr, req)
+		assert.Equal(t, http.StatusUnauthorized, rr.Code)
+	}
+}
+
+func Test_Post_Unauthorized(t *testing.T) {
+	r := createServer("my-secret-token")
+	req, rr := createRequestTest(http.MethodPost, "/products", "{}", "not-my-token")
+	r.ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusUnauthorized, rr.Code)
+}
