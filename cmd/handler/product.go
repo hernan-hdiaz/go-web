@@ -161,18 +161,18 @@ func (p *Product) Update() gin.HandlerFunc {
 			web.Failure(c, http.StatusUnprocessableEntity, err)
 			return
 		}
-
-		//Parse given date
-		_, err = time.Parse("02/01/2006", productRequest.Expiration)
-		//Check valid format
-		if err != nil {
-			web.Failure(c, http.StatusUnprocessableEntity, err)
-			return
+		if productRequest.Expiration != "" {
+			//Parse given date
+			_, err = time.Parse("02/01/2006", productRequest.Expiration)
+			//Check valid format
+			if err != nil {
+				web.Failure(c, http.StatusUnprocessableEntity, err)
+				return
+			}
 		}
-
 		productUpdated, err := p.productService.Update(c, productRequest, id)
 		if err != nil {
-			web.Failure(c, http.StatusConflict, err)
+			web.Failure(c, http.StatusNotFound, err)
 			return
 		}
 		web.Success(c, http.StatusCreated, productUpdated)
