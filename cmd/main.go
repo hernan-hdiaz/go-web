@@ -30,6 +30,7 @@ func main() {
 	})
 	router.GET("/products", handler.GetAll())
 	router.GET("/products/:id", handler.Get())
+	router.GET("/products/consumer_price", handler.GetTotalPrice())
 	router.GET("/products/search", handler.SearchByPriceGt())
 	router.POST("/products", handler.Save())
 	router.PUT("/products/:id", handler.Update())

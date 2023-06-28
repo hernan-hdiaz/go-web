@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -53,6 +54,40 @@ func (p *Product) GetAll() gin.HandlerFunc {
 		products := p.productService.GetAll(c)
 		//Return products
 		web.Success(c, http.StatusOK, products)
+	}
+}
+
+func (p *Product) GetTotalPrice() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		productList := c.Query("list")
+		productList, _ = strings.CutPrefix(productList, "[")
+		productList, _ = strings.CutSuffix(productList, "]")
+		productListIds := strings.Split(productList, ",")
+
+		var convertedProductListIds = []int{}
+		for _, p := range productListIds {
+			productId, err := strconv.Atoi(p)
+			if err != nil {
+				web.Failure(c, http.StatusBadRequest, ErrInvalidID)
+				return
+			}
+			convertedProductListIds = append(convertedProductListIds, productId)
+		}
+		completeProductList, totalPrice, err := p.productService.GetTotalPrice(c, convertedProductListIds)
+		if err != nil {
+			web.Failure(c, http.StatusBadRequest, err)
+			return
+		}
+
+		type consumerPrice struct {
+			Products   []domain.Product `json:"products"`
+			TotalPrice float64          `json:"total_price"`
+		}
+
+		var response = consumerPrice{Products: completeProductList, TotalPrice: totalPrice}
+
+		//Return products
+		web.Success(c, http.StatusOK, response)
 	}
 }
 

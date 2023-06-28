@@ -2,6 +2,8 @@ package product
 
 import (
 	"context"
+	"fmt"
+	"math"
 	"time"
 
 	"github.com/hernan-hdiaz/go-web/internal/domain"
@@ -14,6 +16,7 @@ type Service interface {
 	Save(ctx context.Context, productRequest domain.Product) (int, error)
 	Update(ctx context.Context, productRequest domain.ProductRequest, id int) (domain.Product, error)
 	Delete(ctx context.Context, id int) error
+	GetTotalPrice(ctx context.Context, productListIds []int) ([]domain.Product, float64, error)
 }
 
 type service struct {
@@ -22,6 +25,45 @@ type service struct {
 
 func NewService(repo Repository) Service {
 	return &service{repo}
+}
+func (s *service) GetTotalPrice(ctx context.Context, productListIds []int) ([]domain.Product, float64, error) {
+	var productList = []domain.Product{}
+	var productQuantity = map[int]int{}
+	var totalPrice float64
+	for _, id := range productListIds {
+		product, err := s.Get(ctx, id)
+		if err != nil {
+			return []domain.Product{}, 0, err
+		}
+		if product.IsPublished {
+			if productQuantity[product.ID] == 0 && product.Quantity > 0 {
+				productQuantity[product.ID] = 1
+			} else if productQuantity[product.ID] < product.Quantity {
+				productQuantity[product.ID]++
+			} else {
+				return []domain.Product{}, 0, fmt.Errorf("unavailable quantity for product id: %d", product.ID)
+			}
+			totalPrice += product.Price
+			productList = append(productList, product)
+		} else {
+			return []domain.Product{}, 0, fmt.Errorf("product not published id: %d", product.ID)
+		}
+	}
+	switch {
+	case len(productList) <= 10:
+		totalPrice *= 1.21
+	case len(productList) > 10 && len(productList) <= 20:
+		totalPrice *= 1.17
+	default:
+		totalPrice *= 1.15
+	}
+
+	return productList, roundFloat(totalPrice, 2), nil
+}
+
+func roundFloat(val float64, precision uint) float64 {
+	ratio := math.Pow(10, float64(precision))
+	return math.Round(val*ratio) / ratio
 }
 
 func (s *service) Get(ctx context.Context, id int) (domain.Product, error) {
