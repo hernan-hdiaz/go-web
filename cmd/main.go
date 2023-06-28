@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+
 	"github.com/gin-gonic/gin"
 	"github.com/hernan-hdiaz/go-web/cmd/handler"
 	"github.com/hernan-hdiaz/go-web/internal/domain"
@@ -32,9 +34,23 @@ func main() {
 	router.GET("/products/:id", handler.Get())
 	router.GET("/products/consumer_price", handler.GetTotalPrice())
 	router.GET("/products/search", handler.SearchByPriceGt())
+	router.Use(TokenAuthMiddleware())
 	router.POST("/products", handler.Save())
 	router.PUT("/products/:id", handler.Update())
 	router.DELETE("/products/:id", handler.Delete())
 
 	router.Run()
+}
+
+func TokenAuthMiddleware() gin.HandlerFunc {
+	requiredToken := os.Getenv("TOKEN")
+
+	return func(c *gin.Context) {
+		token := c.GetHeader("token")
+		if token != requiredToken {
+			c.AbortWithStatusJSON(401, gin.H{"error": "Invalid API token"})
+			return
+		}
+		c.Next()
+	}
 }

@@ -3,7 +3,6 @@ package handler
 import (
 	"errors"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -110,13 +109,6 @@ func (p *Product) SearchByPriceGt() gin.HandlerFunc {
 
 func (p *Product) Save() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		//Validate token
-		token := c.GetHeader("token")
-		if token != os.Getenv("TOKEN") {
-			web.Failure(c, http.StatusUnauthorized, ErrInvalidToken)
-			return
-		}
-
 		var productRequest domain.Product
 		if err := c.ShouldBindJSON(&productRequest); err != nil {
 			web.Failure(c, http.StatusUnprocessableEntity, err)
@@ -142,13 +134,6 @@ func (p *Product) Save() gin.HandlerFunc {
 
 func (p *Product) Update() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		//Validate token
-		token := c.GetHeader("token")
-		if token != os.Getenv("TOKEN") {
-			web.Failure(c, http.StatusUnauthorized, ErrInvalidToken)
-			return
-		}
-
 		//Get ID from path param
 		id, err := strconv.Atoi(c.Param("id"))
 		if err != nil {
@@ -181,12 +166,6 @@ func (p *Product) Update() gin.HandlerFunc {
 
 func (p *Product) Delete() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		//Validate token
-		token := c.GetHeader("token")
-		if token != os.Getenv("TOKEN") {
-			web.Failure(c, http.StatusUnauthorized, ErrInvalidToken)
-			return
-		}
 		//Get ID from path param
 		id, err := strconv.Atoi(c.Param("id"))
 		if err != nil {
